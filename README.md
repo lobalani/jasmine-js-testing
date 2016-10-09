@@ -40,9 +40,7 @@ The Unit Tests should:
 
 Why Resist?
 ----------
-Despite common excuses writing Unit Tests are valuable and can save time, increase confidence, and reduce risk.
-
-It might be time consuming to write tests at first, but it becomes easier with time and practice.
+Despite common excuses writing Unit Tests are valuable and can save time, increase confidence, and reduce risk. It might be time consuming to write tests at first, but it becomes easier with time and practice.
 
 Unit Tests should be predictable, atomic, self documenting, focused, and easy to diagnose.
 
