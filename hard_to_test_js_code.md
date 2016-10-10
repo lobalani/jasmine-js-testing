@@ -9,7 +9,7 @@ Overview
 - Example : Traditional Implementation
 - What makes it hard?
 - Hard to Test Parts
-- Tightly Coupled Components
+- Tightly Coupled <Components></Components>
 - Private Parts
 - Singletons
 - Anonymous Functions
@@ -134,13 +134,14 @@ Hard to Test Parts
 Tightly Coupled Components
 --------------------------
 
-Having Tightly Coupled Components means that two or more components have a direct reference to each other. Tight coupling makes it difficult to test one component from another.
+Our first hard to test scenario is when we have tightly coupled components. This means that two or more components have a direct reference to each other. This code is characterized by the following:
 
-This makes the code more brittle, as change in one component could break another.
+- It is difficult if you need to test one component apart from the other
+- Makes code more brittle because a change to one piece could break another
 
 **Example**
 
- Here we have a polls object with two methods, add and getList. The following submit and view objects rely on polls and interact with its methods. The concern here is that there's a direct reference from submit and view to the polls object. If we change the name of the polls object or its methods or parameters, then we'd have a problem on our hands.
+Let's take a look at the following code snippet:
 
 ```JavaScript
 (function(){
@@ -176,19 +177,13 @@ This makes the code more brittle, as change in one component could break another
 })();
 ```
 
+The polls object has two methods: `add` and `getList`. The `submit` and `view` objects rely on `polls` and interact with its methods.
+
+The concern here is that there is a direct reference from `submit` and `view` to the `polls object`. If we changed the name of the `polls` object or its methods or parameters, then we would have a problem on our hands. In this case the code is small, but imagine if these were large pieces of code.
+
+In order to resolve this issue we could relax the coupling by passing `polls` in the `submit` and view objects. We would basically be manually injecting the dependency at this point. Another way to solve this issue is to have the components communicate to each other using a message bus.
+
 **Refactored Code**
-
-Here we have our polls objects, which has an add and getList method. These are communicating in the server either to append new polls or to retrieve a list of polls. The submit and view objects have a direct reference to polls, that's where the tight coupling is happening.  Here we're adding a whole bunch of new poles to the server, we're calling view.init, which gets the list from the server, calls render when it's done, loops over them, and inserts a new list item into the DOM for each item in the loop. And that's considered poor performance.
-
-But what if someone comes in here and changes polls add to addPoll. This will break the code. So what can we do to help protect ourselves from that?
-
-This is a small code set so it's easy to see that something is broken, but that would become harder to spot the larger the code base becomes. And we don't want to go and have to search replace a bunch of things. So let's create a pollBridge, which will act as a contract between submit, view, and polls. And so, submit is looking for something called add. So we're going to map that to polls.add and the view is looking for something called getList and so we're going to map that to polls.getList. However, submit and view need to know about this pollBridge and so let's make an init method where we'll get to pass in our pollBridge and we'll save this off locally. And anytime where we use polls, we'll use our local version. In the same way, we'll do the same thing for view, so we'll type polls in here, save this off. And anytime we use polls we'll use the local version. And then the only thing we have to do is call the init methods and pass in pollBridge. So what did that save us? 
-
-If we decide to go to polls and change add to addPoll, then we don't have to go down and change submit and view code, it can stay the same, we just have to change the pollBridge.
-
-It's not good to touch the DOM too many times, so we're going to try to bundle up a whole bunch of changes and then do it one time. So we are introducing a new variable called markup, it's an array. And in our loop here, instead of actually touching the DOM every time, we are going to add a new item to markup array every time. And then when done, we'll say markup.join, and say join on an empty string. That makes one huge string with all the markup from every item in the array. Then put it inside the jQuery function and it will convert all those markup tags in the string to actual real DOM elements. So now it's in memory, so we need to append it to the output, which is where it was before. 
-
-It works, but now we have loosely coupled our components and made the DOM manipulation code a little bit more performant.
 
 ```JavaScript
 (function(){
@@ -238,18 +233,20 @@ It works, but now we have loosely coupled our components and made the DOM manipu
 })();
 ```
 
+In the above code refactor we introduced a `pollBridge` object that will act as a contract between the various components. We pass the bridge into the `submit` and `view`.
+
+By adding a bridge we are reducing the tight coupling between the various components. For example, if the `polls` `add` method was changed to `addPoll` we would only need to change the `pollBridge` mapping to `add: polls.addPoll`, and wouldn't need to change any code in the submit object since it uses the bridge and not the `polls` object directly.
+
 Private Parts
 -------------
 
-Encapsulation and data hiding are great. However, these practices can make testing harder. This might be acceptable, it just depends on what we need.
+Encapsulation and data hiding are great. However, doing so can make testing harder. This might be acceptable, it just depends on what we need.
+
+We don't need to have 100% unit test coverage so this may be okay. However, if we do want to test these areas then we may need to expose them somehow.
 
 **Example**
 
-Here we have a person object. We're using the revealing module pattern to give us public and private parts. The way this works is, whatever is returned in the last statement will be public. So here we have a public eat method and everything else is private. So the chew and the swallow functions will be private.
-
-If we really wanted to unit test chew and swallow functions, we would need to expose those as public. So a way we could do that is we could just say chew, map it to the chew function in the return object.
-
-It's not always the best option to make everything public, but if we want to unit test our things, we need to have access to it somehow. We don't have to have 100% unit test coverage, so we might not need to expose everything.
+Let's take a look at the following code snippet:
 
 ```JavaScript
 var person = (function(){
@@ -277,6 +274,12 @@ var person = (function(){
 
 person.eat();
 ```
+
+In the above code snippet we are using the revealing module pattern and returning a person object with a public method called eat. If this pattern sounds unfamiliar, the idea is that whatever is returned at the bottom of the IIFE (Immediately Invoked Function Expression) will be public while everything else will be private to the closure.
+
+Internally there are 2 private functions named `chew` and `swallow`. The public `eat` method calls the `chew` function 10 times followed by the `swallow` method.
+
+If we wanted to unit test either the `chew` or `swallow` functions then we'd be out of luck. There isn't a way to get at that functionality directly. However, if we did want to unit test that code then we'd need to expose those methods as well.
 
 Singletons
 ----------
