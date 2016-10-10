@@ -3,19 +3,35 @@ Hard to Test JavaScript Code
 
 Overview
 --------
+- Facts of Life
 - Introduction
 - Unit vs Integration: What's the difference?
-- Example
+- Example : Traditional Implementation
+- What makes it hard?
+- Hard to Test Parts
 - Tightly Coupled Components
 - Private Parts
 - Singletons
 - Anonymous Functions
 - Mixed Concerns
 - New Operators
+- Guiding Priciples
 
 <http://alistapart.com/article/writing-testable-javascript>
 <https://www.pluralsight.com/blog/software-development/6-examples-of-hard-to-test-javascript>
 <https://www.toptal.com/javascript/writing-testable-code-in-javascript>
+
+Facts of Life
+-------------
+>*You will design your code*
+>
+>*You will test your code*
+>
+>*You will refactor your code*
+>
+>*Other people will use your code*
+>
+>*There will be BUGS!*
 
 Introduction
 ------------
@@ -36,6 +52,82 @@ Whereas an integration test is interested in a user’s interaction with an app,
 >When I call a function with a certain input, do I receive the expected output?
 
 If we write our code with our future unit testing needs in mind, we will not only find that writing the tests becomes more straightforward than we might have expected, but also that we’ll simply write better code, too.
+
+Example : Traditional Implementation
+------------------------------------
+```JavaScript
+var tmplCache = {};
+
+function loadTemplate (name) {
+  if (!tmplCache[name]) {
+    tmplCache[name] = $.get('/templates/' + name);
+  }
+  return tmplCache[name];
+}
+
+$(function () {
+
+  var resultsList = $('#results');
+  var liked = $('#liked');
+  var pending = false;
+
+  $('#searchForm').on('submit', function (e) {
+    e.preventDefault();
+
+    if (pending) { return; }
+
+    var form = $(this);
+    var query = $.trim( form.find('input[name="q"]').val() );
+
+    if (!query) { return; }
+
+    pending = true;
+
+    $.ajax('/data/search.json', {
+      data : { q: query },
+      dataType : 'json',
+      success : function (data) {
+        loadTemplate('people-detailed.tmpl').then(function (t) {
+          var tmpl = _.template(t);
+          resultsList.html( tmpl({ people : data.results }) );
+          pending = false;
+        });
+      }
+    });
+
+    $('<li>', {
+      'class' : 'pending',
+      html : 'Searching &hellip;'
+    }).appendTo( resultsList.empty() );
+  });
+
+  resultsList.on('click', '.like', function (e) {
+    e.preventDefault();
+    var name = $(this).closest('li').find('h2').text();
+    liked.find('.no-results').remove();
+    $('<li>', { text: name }).appendTo(liked);
+  });
+
+});
+```
+
+On any given line, we might be dealing with presentation, or data, or user interaction, or application state. Who knows! It’s easy enough to write integration tests for this kind of code, but it’s hard to test individual units of functionality.
+
+What makes it hard?
+-------------------
+- A general lack of structure; almost everything happens in a `$(document).ready()` callback, and then in anonymous functions that can’t be tested because they aren’t exposed.
+- Complex functions; if a function is more than 10 lines, like the submit handler, it’s highly likely that it’s doing too much.
+- Hidden or shared state; for example, since `pending` is in a closure, there’s no way to test whether the pending state is set correctly.
+- Tight coupling; for example, a `$.ajax` success handler shouldn’t need direct access to the DOM.
+
+Hard to Test Parts
+------------------
+- Tightly Coupled Components
+- Private Parts
+- Singletons
+- Anonymous Functions
+- Mixed Concerns
+- New Operators
 
 Tightly Coupled Components
 --------------------------
@@ -81,7 +173,7 @@ This makes the code more brittle, as change in one component could break another
 })();
 ```
 
-**Refactored/Improved Code**
+**Refactored Code**
 
 Here we have our polls objects, which has an add and getList method. These are communicating in the server either to append new polls or to retrieve a list of polls. The submit and view objects have a direct reference to polls, that's where the tight coupling is happening.  Here we're adding a whole bunch of new poles to the server, we're calling view.init, which gets the list from the server, calls render when it's done, loops over them, and inserts a new list item into the DOM for each item in the loop. And that's considered poor performance.
 
@@ -184,3 +276,203 @@ person.eat();
 
 Singletons
 ----------
+A singleton is one of the Gang of Four design patterns and it's a known and popular pattern. The essence of the pattern is that you can have only one instance of an object. Some concerns that can come into play are:
+
+- It isn't so good when unit testing multiple use cases
+- You may need to reset the singleton's state for each test
+
+**Example**
+Let's take a look at the following code snippet:
+
+```JavaScript
+var data = {
+    token: null,
+    users: []
+};
+
+function init (username, password) {
+    data.token = username + password;
+}
+
+function addUser (user) {
+    if (data.token) { data.users.push(user); }
+}
+```
+
+The previous code snippet has a `data` object, which serves as our singleton. The singleton is internally being used by the `ini`t and `addUser` methods.
+
+If we were writing a unit test on the `ini`t function and then moved to test the `addUser` function we would run into a problem if we wanted to verify what happens when there isn't a token set. The token would have been already set in the data singleton since it is shared across tests. In cases like this we'll probably need to reset the data singleton between tests. This is just something we'll need to consider and keep in mind if you use singletons.
+
+**Refactored Code**
+
+```JavaScript
+var newData = function() {
+    return {
+        token: null,
+        users: []
+    };
+};
+
+var users = {
+    init: function(data) {
+        this.data = data;
+    },
+    setToken: function(username, password) {
+        this.data.token = username + password;
+    },
+    addUser: function(user) {
+        if ( this.data.token ) { this.data.users.push(user); }
+    
+};
+
+users.init(newData());
+users.setToken( "eliahmanor", "password" );
+users.addUser({ username: "elijahmanor" });
+```
+In the above refactor code we created a factory function called `newData` that will make a new object with properties that are initialized to the correct values. By doing so each unit test can create its own fresh version of data to use as it is being tested. Using this technique can get around the need to reset the values to some known state between each test.
+
+Anonymous Functions
+-------------------
+Another technique that can be problematic when testing is using anonymous functions. These are very convenient to use.
+
+The issue with having so many anonymous functions is that it isn't easy to test the callback in isolation since there is no name or handle to target the function.
+
+**Example**
+Let's take the following code snippet for example and examine why this might be a problem.
+
+```JavaScript
+$.ajax({
+    url: "/people",
+    success: function (data) {
+        var $list = $("#list");
+        $.each(data.people, function (index, person) {
+            $("<li />", {
+                text: person.fullName
+            }).appendTo($list);
+        });
+    }
+});
+```
+In the above snippet we are calling the jQuery `ajax` method to request a list of people from the server. We have set an anonymous callback function to the `success` option parameter. Although this is a very common way of coding this, it does make testing the code in the callback difficult without actually making an Ajax request.
+
+If we really wanted to unit test the callback, we'd either need to make the actual Ajax request or simulate the Ajax request using a stub or a library like Mockjax. However, with some minimal refactoring we can provide a clean separation that will enable us to test the callback in isolation.
+
+**Refactored Code**
+A possible refactored solution could be the following:
+
+```JavaScript
+function render(data) {
+    var $list = $("#list");
+
+    $.each(data.people, function (index, person) {
+        $("<li />", {
+            text: person.fullName
+        }).appendTo($list);
+    });
+}
+
+$.ajax({
+    url: "/people",
+    success: render
+});
+```
+All we did was moved out the `success` method into its own function so that we can unit test the `render` function apart from actually making an Ajax request.
+
+Mixed Concerns
+--------------
+We should not write code that tries to do too many things in one method, especially if they don't go together. For example, it's a good idea to separate DOM code from data manipulation code.
+
+Some issues we can run into when having mixed concerns are:
+- Testing code with mixed concerns can be very awkward and require more setup and verification code
+- It often requires that we know more details about the Implementation
+
+**Example**
+Let's take the following code snippet for example and examine why this might be a problem.
+
+```JavaScript
+var people = {
+    list: [],
+    add: function (person) {
+        this.list.push(person);
+        $("#numberOfPeople").html(this.list.length);
+    }
+};
+```
+The above snippet has mixed concerns. The `add` method takes its parameter and adds it to an internal `list` array property, which seems appropriate. However, it also updates the DOM in the same method.
+
+The method mixes data and presentation concerns, which is typically not a good idea. It would be better if the `add` method didn't update the DOM directly, but rather publish a message or possibly a higher level method could update the DOM after the `add` method was called.
+
+**Refactored Code: Solution#1**
+A possible refactored solution could be the following:
+```JavaScript
+var people = {
+    list: [],
+    add: function (person) {
+        this.list.push(person);
+        $(this).trigger("person.added", [person]);
+    },
+
+    addAndRender: function(person) {
+        this.add(person);
+        this.render(person);
+    },
+
+    render: function(person) {
+        $("#numberOfPeople").html(this.list.length);
+        $("#lastPersonAdded").html(person.name);
+    }
+};
+
+people.addAndRender({ name: "Brendan Eich" });
+people.addAndRender({ name: "John Resig" });
+```
+The above code refactor uses a new `addAndRender` method to help combine the two different actions that are being performed.
+
+**Refactored Code: Solution#2**
+Let's take a look at another implementation that uses an event to communicate that something has happened.
+```JavaScript
+var people = {
+    list: [],
+    init: function() {
+        $(this).on("person.added", this.render.bind(this));
+    },
+
+    add: function (person) {
+        this.list.push(person);
+        $(this).trigger("person.added", [person]);
+    },
+
+    render: function(e, person) {
+        $("#numberOfPeople").html(this.list.length);
+        $("#lastPersonAdded").html(person.name);
+    }
+};
+
+people.init();
+people.add({ name: "Brendan Eich" });
+people.add({ name: "John Resig" });
+```
+The above code uses a custom event called `person.added` to handle the communication that the DOM needs to be updated. Our `init` method helps wire-up the render method to be triggered when our `person.added` message is triggered.
+
+Regardless either refactor solution is better than the initial code in that the concerns are now split up into separate methods.
+
+New Operators
+-------------
+
+
+
+
+
+
+Guiding Priciples
+-----------------
+The above problematic code snippets aren't the only types of code you should watch out for, but it is a good start and should hopefully open your eyes to some of the common pitfalls you could run into when developing your application. To review here are some concepts you should keep in mind:
+
+- Try not to tightly couple your components.
+- Be aware that anything you make private will be unavailable to test.
+- Limit the use of singletons, otherwise you'll need to reset them. Use constructors to create instances.
+- Be careful of using too many anonymous functions.
+- Try not to mix various non-related concerns in your code. Write Pure Functions.
+- Keep methods simple.
+- Do not intermingle responsibilities.
+- Be aware of the new operator when the constructor does work for you.
