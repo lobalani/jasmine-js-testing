@@ -17,12 +17,9 @@ Overview
 - New Operators
 - Guiding Priciples
 
-<http://alistapart.com/article/writing-testable-javascript>
-<https://www.pluralsight.com/blog/software-development/6-examples-of-hard-to-test-javascript>
-<https://www.toptal.com/javascript/writing-testable-code-in-javascript>
-
 Facts of Life
 -------------
+
 >*You will design your code*
 >
 >*You will test your code*
@@ -35,6 +32,7 @@ Facts of Life
 
 Introduction
 ------------
+
 We’ve all been there: that bit of JavaScript functionality that started out as just a handful of lines grows to a dozen, then two dozen, then more. Along the way, a function picks up a few more arguments; a conditional picks up a few more conditions. And then one day, the bug report comes in: something’s broken, and it’s up to us to untangle the mess.
 
 As we ask our client-side code to take on more and more responsibilities two things are becoming clear. One, we can’t just point and click our way through testing that things are working as we expect; automated tests are key to having confidence in our code. Two, we’re probably going to have to change how we write our code in order to make it possible to write tests.
@@ -45,6 +43,7 @@ That’s where unit testing comes in. And we’ll have a very hard time writing 
 
 Unit vs Integration: What's the difference?
 -------------------------------------------
+
 Writing integration tests is usually fairly straightforward: we simply write code that describes how a user interacts with our app, and what the user should expect to see as they do.
 
 Whereas an integration test is interested in a user’s interaction with an app, a unit test is narrowly focused on a small piece of code:
@@ -55,6 +54,7 @@ If we write our code with our future unit testing needs in mind, we will not onl
 
 Example : Traditional Implementation
 ------------------------------------
+
 ```JavaScript
 var tmplCache = {};
 
@@ -115,6 +115,7 @@ On any given line, we might be dealing with presentation, or data, or user inter
 
 What makes it hard?
 -------------------
+
 - A general lack of structure; almost everything happens in a `$(document).ready()` callback, and then in anonymous functions that can’t be tested because they aren’t exposed.
 - Complex functions; if a function is more than 10 lines, like the submit handler, it’s highly likely that it’s doing too much.
 - Hidden or shared state; for example, since `pending` is in a closure, there’s no way to test whether the pending state is set correctly.
@@ -122,6 +123,7 @@ What makes it hard?
 
 Hard to Test Parts
 ------------------
+
 - Tightly Coupled Components
 - Private Parts
 - Singletons
@@ -131,6 +133,7 @@ Hard to Test Parts
 
 Tightly Coupled Components
 --------------------------
+
 Having Tightly Coupled Components means that two or more components have a direct reference to each other. Tight coupling makes it difficult to test one component from another.
 
 This makes the code more brittle, as change in one component could break another.
@@ -237,6 +240,7 @@ It works, but now we have loosely coupled our components and made the DOM manipu
 
 Private Parts
 -------------
+
 Encapsulation and data hiding are great. However, these practices can make testing harder. This might be acceptable, it just depends on what we need.
 
 **Example**
@@ -276,12 +280,14 @@ person.eat();
 
 Singletons
 ----------
+
 A singleton is one of the Gang of Four design patterns and it's a known and popular pattern. The essence of the pattern is that you can have only one instance of an object. Some concerns that can come into play are:
 
 - It isn't so good when unit testing multiple use cases
 - You may need to reset the singleton's state for each test
 
 **Example**
+
 Let's take a look at the following code snippet:
 
 ```JavaScript
@@ -329,15 +335,18 @@ users.init(newData());
 users.setToken( "eliahmanor", "password" );
 users.addUser({ username: "elijahmanor" });
 ```
+
 In the above refactor code we created a factory function called `newData` that will make a new object with properties that are initialized to the correct values. By doing so each unit test can create its own fresh version of data to use as it is being tested. Using this technique can get around the need to reset the values to some known state between each test.
 
 Anonymous Functions
 -------------------
+
 Another technique that can be problematic when testing is using anonymous functions. These are very convenient to use.
 
 The issue with having so many anonymous functions is that it isn't easy to test the callback in isolation since there is no name or handle to target the function.
 
 **Example**
+
 Let's take the following code snippet for example and examine why this might be a problem.
 
 ```JavaScript
@@ -353,11 +362,13 @@ $.ajax({
     }
 });
 ```
+
 In the above snippet we are calling the jQuery `ajax` method to request a list of people from the server. We have set an anonymous callback function to the `success` option parameter. Although this is a very common way of coding this, it does make testing the code in the callback difficult without actually making an Ajax request.
 
 If we really wanted to unit test the callback, we'd either need to make the actual Ajax request or simulate the Ajax request using a stub or a library like Mockjax. However, with some minimal refactoring we can provide a clean separation that will enable us to test the callback in isolation.
 
 **Refactored Code**
+
 A possible refactored solution could be the following:
 
 ```JavaScript
@@ -376,10 +387,12 @@ $.ajax({
     success: render
 });
 ```
+
 All we did was moved out the `success` method into its own function so that we can unit test the `render` function apart from actually making an Ajax request.
 
 Mixed Concerns
 --------------
+
 We should not write code that tries to do too many things in one method, especially if they don't go together. For example, it's a good idea to separate DOM code from data manipulation code.
 
 Some issues we can run into when having mixed concerns are:
@@ -387,6 +400,7 @@ Some issues we can run into when having mixed concerns are:
 - It often requires that we know more details about the Implementation
 
 **Example**
+
 Let's take the following code snippet for example and examine why this might be a problem.
 
 ```JavaScript
@@ -398,12 +412,15 @@ var people = {
     }
 };
 ```
+
 The above snippet has mixed concerns. The `add` method takes its parameter and adds it to an internal `list` array property, which seems appropriate. However, it also updates the DOM in the same method.
 
 The method mixes data and presentation concerns, which is typically not a good idea. It would be better if the `add` method didn't update the DOM directly, but rather publish a message or possibly a higher level method could update the DOM after the `add` method was called.
 
 **Refactored Code: Solution#1**
+
 A possible refactored solution could be the following:
+
 ```JavaScript
 var people = {
     list: [],
@@ -426,10 +443,13 @@ var people = {
 people.addAndRender({ name: "Brendan Eich" });
 people.addAndRender({ name: "John Resig" });
 ```
+
 The above code refactor uses a new `addAndRender` method to help combine the two different actions that are being performed.
 
 **Refactored Code: Solution#2**
+
 Let's take a look at another implementation that uses an event to communicate that something has happened.
+
 ```JavaScript
 var people = {
     list: [],
@@ -452,6 +472,7 @@ people.init();
 people.add({ name: "Brendan Eich" });
 people.add({ name: "John Resig" });
 ```
+
 The above code uses a custom event called `person.added` to handle the communication that the DOM needs to be updated. Our `init` method helps wire-up the render method to be triggered when our `person.added` message is triggered.
 
 Regardless either refactor solution is better than the initial code in that the concerns are now split up into separate methods.
@@ -459,13 +480,82 @@ Regardless either refactor solution is better than the initial code in that the 
 New Operators
 -------------
 
+Another issue that can make unit testing difficult is using the `new` operator frequently in the application code. 
 
+Instead, we might consider injecting dependencies into component or provide enough information needed for it to create itself.
 
+**Example**
 
+Let's take the following code snippet for example and examine why this might be a problem.
 
+```JavaScript
+// ... more code ...
+
+nextBirthday: function () {
+    var now = new Date(),
+        next = Number.MAX_VALUE;
+        person;
+    $.each(this.list, function (index, item) {
+        /* ... */
+    });
+
+    return person;
+}
+
+// ... more code ...
+```
+
+The previous code is a small snippet to determine whose birthday is next from an array of individuals. The implementation is fairly straightforward, but the reason it is problematic is because it creates a `new Date` which ends up being the current date and time. That sounds reasonable at first thought, but it becomes a nuisance when we want to unit test the behavior.
+
+**Refactored Code: Solution#2**
+
+The following code shows a simple way to get around this issue:
+
+```JavaScript
+var people = {
+    list: [],
+    add: function(person) { this.list.push(person); },
+
+    nextBirthday: function (date) {
+        var now = date ? new Date(date) : new Date(),
+            next = Number.MAX_VALUE, person;
+
+        $.each(this.list, function (index, item) {
+            var dob = new Date(item.dob),
+                year = dob.setFullYear(now.getFullYear()) > now ?
+                    now.getFullYear() : now.getFullYear() + 1,
+                diff = dob.setFullYear(year) - now;
+
+            if (diff < next) { next = diff; person = item; }
+        });
+
+        return person;
+    }
+};
+
+people.add({ name: "Mark", dob: "12/19/1976" });
+people.add({ name: "Jane", dob: "10/18/1979" });
+people.add({ name: "Jim", dob: "8/17/1983" });
+people.add({ name: "Mary", dob: "7/9/1981" });
+people.add({ name: "Alex", dob: "8/17/2010" });
+people.add({ name: "Bob", dob: "3/1/1985" });
+people.add({ name: "John", dob: "1/1/1982" });
+people.add({ name: "Sue", dob: "2/1/1987" });
+
+console.log(people.nextBirthday("12/15/2013").name);
+```
+
+At the bottom we are building up a list of people with their birthdays and then console.logging whose birthday is next.
+
+This seems great at first, but then we realize that we aren't necessarily testing all the code paths in the `nextBirthday` method. It is dependant on the current Date! Are you testing for birthdays that have already happened this year? It would be much better if we could control the so-called-current-date so we could be certain what edge cases are in fact being tested.
+
+The easiest way to fix this code is to pass in an optional date parameter that can override what the date is set to. It's a pretty easy fix, but it provides much more flexibility to the system.
+
+So, the main point here is to just be aware of what objects are created and make sure there is a way to control them for testability.
 
 Guiding Priciples
 -----------------
+
 The above problematic code snippets aren't the only types of code you should watch out for, but it is a good start and should hopefully open your eyes to some of the common pitfalls you could run into when developing your application. To review here are some concepts you should keep in mind:
 
 - Try not to tightly couple your components.
