@@ -1,14 +1,41 @@
-Examples of Hard to Test Code
-=============================
+Hard to Test JavaScript Code
+============================
 
 Overview
 --------
+- Introduction
+- Unit vs Integration: What's the difference?
+- Example
 - Tightly Coupled Components
 - Private Parts
 - Singletons
 - Anonymous Functions
 - Mixed Concerns
 - New Operators
+
+<http://alistapart.com/article/writing-testable-javascript>
+<https://www.pluralsight.com/blog/software-development/6-examples-of-hard-to-test-javascript>
+<https://www.toptal.com/javascript/writing-testable-code-in-javascript>
+
+Introduction
+------------
+We’ve all been there: that bit of JavaScript functionality that started out as just a handful of lines grows to a dozen, then two dozen, then more. Along the way, a function picks up a few more arguments; a conditional picks up a few more conditions. And then one day, the bug report comes in: something’s broken, and it’s up to us to untangle the mess.
+
+As we ask our client-side code to take on more and more responsibilities two things are becoming clear. One, we can’t just point and click our way through testing that things are working as we expect; automated tests are key to having confidence in our code. Two, we’re probably going to have to change how we write our code in order to make it possible to write tests.
+
+Really, we need to change how we code? Yes—because even if we know that automated tests are a good thing, most of us are probably only able to write integration tests right now. Integration tests are valuable because they focus on how the pieces of an application work together, but what they don’t do is tell us whether individual units of functionality are behaving as expected.
+
+That’s where unit testing comes in. And we’ll have a very hard time writing unit tests until we start writing testable JavaScript.
+
+Unit vs Integration: What's the difference?
+-------------------------------------------
+Writing integration tests is usually fairly straightforward: we simply write code that describes how a user interacts with our app, and what the user should expect to see as they do.
+
+Whereas an integration test is interested in a user’s interaction with an app, a unit test is narrowly focused on a small piece of code:
+
+>When I call a function with a certain input, do I receive the expected output?
+
+If we write our code with our future unit testing needs in mind, we will not only find that writing the tests becomes more straightforward than we might have expected, but also that we’ll simply write better code, too.
 
 Tightly Coupled Components
 --------------------------
