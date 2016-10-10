@@ -507,7 +507,7 @@ nextBirthday: function () {
 
 The previous code is a small snippet to determine whose birthday is next from an array of individuals. The implementation is fairly straightforward, but the reason it is problematic is because it creates a `new Date` which ends up being the current date and time. That sounds reasonable at first thought, but it becomes a nuisance when we want to unit test the behavior.
 
-**Refactored Code: Solution#2**
+**Refactored Code**
 
 The following code shows a simple way to get around this issue:
 
