@@ -10,3 +10,4 @@ Overview
 - [Functional JavaScript](functional_js.md)
 - [JavaScript Design Patterns](design_patterns.md)
 - [Best Practices](best_practices.md)
+- [Writing Maintainable JavaScript](maintainable_js.md)
